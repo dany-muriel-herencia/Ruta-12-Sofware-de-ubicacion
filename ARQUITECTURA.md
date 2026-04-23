@@ -1,61 +1,157 @@
-# Arquitectura de Capas - Ruta 12
+# Arquitectura Clean Architecture - Ruta 12
 
 ## 📋 Resumen General
 
-El proyecto utiliza una arquitectura de capas con separación clara entre frontend y backend, facilitando el mantenimiento, testing y escalabilidad.
+**⚠️ IMPORTANTE**: Este proyecto utiliza **Clean Architecture** propuesta por Robert C. Martin.
+
+Esta arquitectura es superior a una arquitectura de capas tradicional porque:
+
+- ✓ La lógica de negocio es **completamente independiente** de frameworks
+- ✓ Es **altamente testeable** sin necesidad de BD, UI, o APIs
+- ✓ **Flexible para cambios**: Cambiar BD, framework o UI es trivial
+- ✓ **Escalable**: Perfecto para proyectos que crecen
+
+## 🎯 Principios Clave
+
+1. **Independencia de Frameworks**: El código no depende de Express, React, etc.
+2. **Testeable**: La lógica de negocio se prueba sin UI, BD o acceso externo
+3. **Independencia de UI**: Cambiar de web a mobile no afecta la lógica
+4. **Independencia de BD**: La lógica central no conoce qué BD se usa
+5. **Independencia de Agencias Externas**: No depende de APIs externas
+
+## 🏗️ Estructura
 
 ```
 Ruta-12-Sofware-de-ubicacion/
 │
-├── 📁 backend/                          # API REST - Lógica de negocio
-│   ├── controllers/                     # Capa de presentación HTTP
-│   ├── services/                        # Capa de lógica de negocio
-│   ├── models/                          # Capa de datos (esquemas)
-│   ├── routes/                          # Definición de endpoints
-│   ├── middleware/                      # Middleware (auth, logging)
-│   ├── config/                          # Configuración
-│   ├── database/                        # Migraciones y seeds
-│   ├── utils/                           # Funciones auxiliares
-│   └── README.md
-│
-├── 📁 frontend/                         # Interfaz de usuario (React/Vue/Angular)
-│   ├── public/                          # Archivos estáticos públicos
+├── 📁 backend/ (Node.js/Express/TypeScript)
 │   ├── src/
-│   │   ├── components/                  # Componentes reutilizables
-│   │   ├── pages/                       # Páginas de la aplicación
-│   │   ├── services/                    # Llamadas a API
-│   │   ├── hooks/                       # Custom hooks
-│   │   ├── utils/                       # Funciones auxiliares
-│   │   ├── styles/                      # Estilos globales
-│   │   └── assets/                      # Recursos (imágenes, iconos)
-│   └── README.md
+│   │   ├── 🔵 domain/                   # NÚCLEO: Reglas de negocio puras
+│   │   │   ├── entities/                # Entidades del dominio
+│   │   │   └── interfaces/              # Contratos
+│   │   │
+│   │   ├── 🟢 application/              # Casos de uso
+│   │   │   ├── use_cases/               # Un archivo por caso de uso
+│   │   │   └── dtos/                    # Objetos de transferencia
+│   │   │
+│   │   ├── 🟡 infrastructure/           # Implementaciones externas
+│   │   │   ├── repositories/            # Acceso a datos
+│   │   │   ├── database/                # Conexión, migraciones
+│   │   │   └── external_services/       # APIs, email, etc.
+│   │   │
+│   │   ├── 🔴 presentation/             # HTTP/Controllers
+│   │   │   ├── controllers/
+│   │   │   ├── middleware/
+│   │   │   └── routes/
+│   │   │
+│   │   └── 🟣 shared/                   # Utilidades compartidas
+│   │
+│   └── tests/
 │
-├── 📁 documentacion/                    # Documentación del proyecto
-│   └── diagrama de clases/
+├── 📁 frontend/ (React/TypeScript)
+│   ├── src/
+│   │   ├── 🔵 domain/                   # Entidades de negocio
+│   │   ├── 🟢 application/              # Casos de uso
+│   │   ├── 🟡 infrastructure/           # API, almacenamiento
+│   │   ├── 🔴 presentation/             # React components
+│   │   └── 🟣 shared/                   # Utilities
+│   │
+│   └── public/
 │
-└── ARQUITECTURA.md                      # Este archivo
+├── 📁 documentacion/
+│
+├── CLEAN_ARCHITECTURE.md                # Guía completa
+├── ARQUITECTURA.md                      # Este archivo
+└── README.md
 ```
 
-## 🔄 Flujo de Datos
+## 🔄 Regla de Dependencia (CRÍTICA)
 
 ```
-Usuario → Frontend → Services/API → Backend → Services → Models → Database
-                                  ↓
-                        Controllers → Response JSON
+Las dependencias SIEMPRE apuntan HACIA ADENTRO
+
+Domain ← Application ← Infrastructure ← Presentation
+
+Domain NUNCA depende de ninguna otra capa
 ```
 
-## ✅ Ventajas de esta Arquitectura
+## 📊 Flujo de Datos en Clean Architecture
 
-- **Separación de responsabilidades**: Cada capa tiene un propósito claro
-- **Facilita el testing**: Capas independientes y testables
-- **Escalabilidad**: Fácil agregar nuevas funcionalidades
-- **Mantenibilidad**: Código organizado y fácil de encontrar
-- **Reutilización**: Componentes y servicios reutilizables
-- **Desarrollo paralelo**: Frontend y backend pueden desarrollarse simultáneamente
+```
+HTTP Request
+    ↓
+Presentation (Controller)
+    ↓
+Application (Use Case) ← Orquesta todo
+    ↓
+Domain (Entities) ← Lógica pura de negocio
+    ↓
+Infrastructure (Repository) ← Accede a BD
+    ↓
+Base de Datos
+    │
+    ↓ (Retorna datos)
+    ↓
+Presentation (DTO)
+    ↓
+HTTP Response (JSON)
+```
+
+## 🎓 Ejemplo Práctico
+
+### Crear un Usuario
+
+**Frontend:**
+1. Usuario completa formulario
+2. Component llama `ObtenerUsuariosUseCase`
+3. Use Case llama `UsuarioAPI.crear()`
+4. API hace POST a backend
+
+**Backend:**
+1. Controller recibe POST /usuarios
+2. Llama `CrearUsuarioUseCase`
+3. Use Case:
+   - Valida entidad Usuario (reglas de negocio)
+   - Llama `IUsuarioRepository.guardar()`
+4. Repository:
+   - Implementa `IUsuarioRepository`
+   - Guarda en Base de Datos
+5. Retorna UsuarioResponseDTO
+6. Controller retorna JSON
+
+## 🎯 Capas Resumidas
+
+| Capa | Responsabilidad | Ejemplo |
+|------|-----------------|---------|
+| 🔵 Domain | Reglas de negocio puras | Validar email único |
+| 🟢 Application | Orquestar domain + infra | CrearUsuarioUseCase |
+| 🟡 Infrastructure | Implementaciones externas | UsuarioRepository, EmailService |
+| 🔴 Presentation | HTTP/UI | UsuarioController, UsuarioPage |
+| 🟣 Shared | Código compartido | Validadores, formatos |
+
+## ✅ Ventajas de Clean Architecture
+
+✓ **Código testeable**: Tests unitarios sin BD, sin framework
+✓ **Lógica protegida**: Las reglas de negocio nunca cambian
+✓ **Flexible**: Cambiar BD/framework es fácil
+✓ **Escalable**: Agregar features es adicionar Use Cases
+✓ **Profesional**: Usado en proyectos grandes y exitosos
+✓ **Independencia**: Desarrollo paralelo de frontend/backend
+
+## 📖 Documentación Completa
+
+👉 Ver [CLEAN_ARCHITECTURE.md](CLEAN_ARCHITECTURE.md) para documentación detallada
+
+👉 Ver [backend/README.md](backend/README.md) para guía del backend
+
+👉 Ver [frontend/README.md](frontend/README.md) para guía del frontend
 
 ## 🚀 Próximos Pasos
 
-1. Configurar package.json en backend y frontend
-2. Configurar base de datos
-3. Crear primeras rutas y controladores
-4. Desarrollar componentes principales
+1. ✅ Arquitectura creada
+2. ⏭️ Configurar `package.json` en backend y frontend
+3. ⏭️ Crear primeras entidades en Domain
+4. ⏭️ Crear primeros Use Cases
+5. ⏭️ Implementar Repositories
+6. ⏭️ Crear Controllers
+7. ⏭️ Escribir tests unitarios
